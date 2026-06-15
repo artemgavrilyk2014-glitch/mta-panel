@@ -1,0 +1,106 @@
+name: Build APK & EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mta-panel-apk
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: 'stable'
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Zip Windows build
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath mta-panel-windows.zip
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: mta-panel-windows
+          path: mta-panel-windows.zip
+
+  release:
+    name: Create Release
+    needs: [build-apk, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: mta-panel-apk
+          path: artifacts/
+
+      - name: Download Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: mta-panel-windows
+          path: artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: MTA Panel v${{ github.run_number }}
+          files: artifacts/*
+          body: |
+            ## MTA Server Control Panel
+            
+            ### Завантаження:
+            - 📱 `app-arm64-v8a-release.apk` — Android (більшість телефонів)
+            - 🖥️ `mta-panel-windows.zip` — Windows
+            
+            ### Встановлення Android:
+            1. Завантаж APK на телефон
+            2. Дозволь встановлення з невідомих джерел
+            3. Встанови і запускай!

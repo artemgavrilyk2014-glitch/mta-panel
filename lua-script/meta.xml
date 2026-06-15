@@ -1,0 +1,11 @@
+<meta>
+    <info author="MTA Panel" version="1.0" description="HTTP API для MTA Panel додатку"/>
+    <script src="server.lua" type="server"/>
+    <export function="getPlayers" http="true"/>
+    <export function="getInfo" http="true"/>
+    <export function="kickPlayer" http="true"/>
+    <export function="banPlayer" http="true"/>
+    <settings>
+        <setting name="httpserver" value="1"/>
+    </settings>
+</meta>
